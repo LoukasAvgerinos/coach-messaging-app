@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '/services/chat/chat_services.dart';
 import '/services/auth/auth_service.dart';
-import '/services/notification_service.dart'; //  Import notification service
+import '/services/notification_service.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 class ChatPage extends StatefulWidget {
@@ -19,15 +19,12 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
-  // text controller
   final TextEditingController _messageController = TextEditingController();
-
-  // chat & auth services instances
   final ChatService _chatService = ChatService();
   final AuthService _authService = AuthService();
   final NotificationService _notificationService = NotificationService();
 
-  // Track last message count to detect new messages
+  // ⭐ THIS VARIABLE MUST BE HERE!
   int _lastMessageCount = 0;
 
   @override
@@ -36,7 +33,6 @@ class _ChatPageState extends State<ChatPage> {
     super.dispose();
   }
 
-  // send message method
   void sendMessage() async {
     final String message = _messageController.text.trim();
     if (message.isNotEmpty) {
@@ -58,10 +54,7 @@ class _ChatPageState extends State<ChatPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // Display messages
             Expanded(child: _buildMessageList()),
-
-            // User input
             _buildMessageInput(),
           ],
         ),
@@ -69,77 +62,91 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  /// build message list
+  /// build message list - ULTRA DEBUG VERSION
   Widget _buildMessageList() {
     String senderID = _authService.currentUser!.uid;
+
+    print('═══════════════════════════════════════');
+    print('🔍 [STREAM] Building message list...');
+    print('👤 [STREAM] My User ID: $senderID');
+    print('═══════════════════════════════════════');
 
     return StreamBuilder(
       stream: _chatService.getMessages(senderID, widget.receiverId),
       builder: (context, snapshot) {
+        print('\n--- STREAM BUILDER FIRED ---');
+        print('Connection state: ${snapshot.connectionState}');
+
         if (snapshot.hasError) {
+          print('❌ ERROR: ${snapshot.error}');
           return Center(child: Text('Error: ${snapshot.error}'));
         }
+
         if (snapshot.connectionState == ConnectionState.waiting) {
+          print('⏳ WAITING for data...');
           return const Center(child: CircularProgressIndicator());
         }
 
         final messages = snapshot.data!.docs;
+        print('📊 Total messages: ${messages.length}');
+        print('📊 Last message count: $_lastMessageCount');
 
-        // Detect new messages and play sound
-        /* if (messages.isNotEmpty) {
-          // Check if we got a new message
+        // DETECTION LOGIC WITH LOTS OF DEBUG
+        if (messages.isNotEmpty) {
+          print('\n🔍 DETECTION CHECK:');
+          print('   Messages empty? NO (${messages.length} messages)');
+          print(
+            '   Messages.length (${messages.length}) > _lastMessageCount ($_lastMessageCount)? ${messages.length > _lastMessageCount}',
+          );
+
           if (messages.length > _lastMessageCount) {
-            // Get the newest message (first in list since we likely reverse it)
-            final newestMessage = messages.first.data() as Map<String, dynamic>;
-            final isFromOtherUser = newestMessage['senderId'] != senderID;
+            print('\n   ✅ NEW MESSAGE DETECTED!');
 
-            // Only play sound if message is from the other user (not from me)
+            final newestMessage = messages.last.data() as Map<String, dynamic>;
+            final messageSenderId = newestMessage['senderId'];
+            final messageText = newestMessage['message'];
+
+            print('   📨 Newest message: "$messageText"');
+            print('   👤 Message sender ID: $messageSenderId');
+            print('   👤 My ID: $senderID');
+            print('   🔍 From other user? ${messageSenderId != senderID}');
+            print('   🔍 Not first load? ${_lastMessageCount > 0}');
+
+            final isFromOtherUser = messageSenderId != senderID;
+
             if (isFromOtherUser && _lastMessageCount > 0) {
-              _notificationService.playNotificationSound();
+              print('\n   🔊 PLAYING SOUND NOW!');
+              AudioPlayer().play(AssetSource('sounds/new_message.mp3'));
+            } else if (!isFromOtherUser) {
+              print('\n   ❌ NO SOUND - I sent this message');
+            } else {
+              print('\n   ❌ NO SOUND - First load');
             }
+
+            _lastMessageCount = messages.length;
+          } else {
+            print('   ⏸️ No new messages (count same)');
           }
+        } else if (_lastMessageCount == 0) {
+          print('\n📊 FIRST LOAD: Setting initial count');
           _lastMessageCount = messages.length;
-        }*/
-
-        // Only play sound for NEW messages from OTHER user
-        if (messages.isNotEmpty && messages.length > _lastMessageCount) {
-          // Get the newest message
-          final newestMessage = messages.first.data() as Map<String, dynamic>;
-          final isFromOtherUser = newestMessage['senderId'] != senderID;
-
-          // Only play sound if:
-          // 1. Message is from OTHER user (not me)
-          // 2. This isn't the first load (_lastMessageCount > 0)
-          if (isFromOtherUser && _lastMessageCount > 0) {
-            print('🔊 Playing sound for received message');
-            AudioPlayer().play(AssetSource('sounds/new_message.mp3'));
-          } else if (!isFromOtherUser) {
-            print('✉️ Message sent by me - no sound');
-          }
-
-          // Update message count
-          _lastMessageCount = messages.length;
-        } else if (messages.isNotEmpty && _lastMessageCount == 0) {
-          // First load - just set the count, don't play sound
-          _lastMessageCount = messages.length;
-          print('📊 Initial load: ${messages.length} messages');
         }
 
+        print('--- END STREAM BUILDER ---\n');
+
         return ListView.builder(
-          reverse: true, //  NEW: Show newest messages at bottom
+          reverse: true,
           padding: const EdgeInsets.all(10),
           itemCount: messages.length,
           itemBuilder: (context, index) {
-            // Since reverse: true, we need to reverse the index
             final message = messages[messages.length - 1 - index];
             final messageData = message.data() as Map<String, dynamic>;
             final isSentByCurrentUser = messageData['senderId'] == senderID;
 
             return Align(
               alignment: isSentByCurrentUser
-                  ? Alignment
-                        .centerRight // Sender: RIGHT
-                  : Alignment.centerLeft, // Receiver: LEFT
+                  ? Alignment.centerRight
+                  : Alignment.centerLeft,
               child: Container(
                 margin: const EdgeInsets.symmetric(vertical: 5),
                 padding: const EdgeInsets.symmetric(
@@ -147,23 +154,20 @@ class _ChatPageState extends State<ChatPage> {
                   vertical: 10,
                 ),
                 constraints: BoxConstraints(
-                  maxWidth:
-                      MediaQuery.of(context).size.width * 0.7, // Max 70% width
+                  maxWidth: MediaQuery.of(context).size.width * 0.7,
                 ),
                 decoration: BoxDecoration(
                   color: isSentByCurrentUser
-                      ? Theme.of(context)
-                            .colorScheme
-                            .primary //  Use theme color
+                      ? Theme.of(context).colorScheme.primary
                       : Theme.of(context).colorScheme.secondary,
                   borderRadius: BorderRadius.only(
                     topLeft: const Radius.circular(16),
                     topRight: const Radius.circular(16),
                     bottomLeft: isSentByCurrentUser
                         ? const Radius.circular(16)
-                        : const Radius.circular(0), // Tail on left for receiver
+                        : const Radius.circular(0),
                     bottomRight: isSentByCurrentUser
-                        ? const Radius.circular(0) // Tail on right for sender
+                        ? const Radius.circular(0)
                         : const Radius.circular(16),
                   ),
                 ),
@@ -184,7 +188,6 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  // build message input
   Widget _buildMessageInput() {
     return Container(
       padding: const EdgeInsets.all(8.0),
@@ -215,7 +218,7 @@ class _ChatPageState extends State<ChatPage> {
                   vertical: 10,
                 ),
               ),
-              onSubmitted: (_) => sendMessage(), // Send on Enter key
+              onSubmitted: (_) => sendMessage(),
             ),
           ),
           const SizedBox(width: 8),

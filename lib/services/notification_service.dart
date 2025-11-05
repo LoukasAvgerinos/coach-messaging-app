@@ -230,17 +230,14 @@ class NotificationService {
   // Play notification sound
   Future<void> playNotificationSound() async {
     try {
-      // You can choose different sounds:
-      // Option 1: Use built-in asset sound
+      print('🔊 [NotificationService] Playing notification sound...');
+      print('📁 [NotificationService] File path: sounds/new_message.mp3');
+
       await _audioPlayer.play(AssetSource('sounds/new_message.mp3'));
 
-      // Option 2: Use different sounds for different scenarios
-      // await _audioPlayer.play(AssetSource('sounds/message_received.mp3'));
-
-      // Option 3: Control volume
-      // await _audioPlayer.setVolume(0.8);
-      // await _audioPlayer.play(AssetSource('sounds/notification.mp3'));
+      print('✅ [NotificationService] Sound command sent successfully!');
     } catch (e) {
+      print('❌ [NotificationService] ERROR: $e');
       if (kDebugMode) {
         print('Error playing notification sound: $e');
       }
