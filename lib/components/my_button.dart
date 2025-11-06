@@ -56,7 +56,7 @@ class MyButton extends StatelessWidget {
             ),
             child: Container(
               padding: const EdgeInsets.symmetric(
-                horizontal: 110,
+                horizontal: 120,
                 vertical: 16,
               ),
               child: Text(

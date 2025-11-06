@@ -84,7 +84,7 @@ import '/components/drawer.dart';
 import '/components/user_tile.dart';
 import '/services/chat/chat_services.dart';
 import '/services/auth/auth_service.dart';
-import 'package:audioplayers/audioplayers.dart'; // ⭐ ADD THIS
+import 'package:audioplayers/audioplayers.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -95,7 +95,7 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Coaching Chat'),
         centerTitle: true,
-        // ⭐ ADD TEST BUTTON IN APP BAR
+        //  ADD TEST BUTTON IN APP BAR
         actions: [
           IconButton(
             icon: const Icon(Icons.volume_up),

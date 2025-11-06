@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '/services/chat/chat_services.dart';
 import '/services/auth/auth_service.dart';
 import '/services/notification_service.dart';
-import 'package:audioplayers/audioplayers.dart';
 
 class ChatPage extends StatefulWidget {
   final String receiverEmail;
@@ -116,7 +115,7 @@ class _ChatPageState extends State<ChatPage> {
 
             if (isFromOtherUser && _lastMessageCount > 0) {
               print('\n   🔊 PLAYING SOUND NOW!');
-              AudioPlayer().play(AssetSource('sounds/new_message.mp3'));
+              _notificationService.playNotificationSound();
             } else if (!isFromOtherUser) {
               print('\n   ❌ NO SOUND - I sent this message');
             } else {

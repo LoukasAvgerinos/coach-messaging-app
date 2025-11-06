@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+//import 'package:provider/provider.dart';
 import '../../pages/login_page.dart';
 import '../../pages/register.dart';
-import '../../themes/theme_provider.dart';
+//import '../../themes/theme_provider.dart';
 
 class LoginOrRegister extends StatefulWidget {
   const LoginOrRegister({super.key});
@@ -55,6 +55,7 @@ class _LoginOrRegisterState extends State<LoginOrRegister> {
                   ),
           ),
 
+          /*
           // Floating theme toggle button in top right
           Positioned(
             top: 50,
@@ -87,6 +88,7 @@ class _LoginOrRegisterState extends State<LoginOrRegister> {
               ),
             ),
           ),
+          */
         ],
       ),
     );

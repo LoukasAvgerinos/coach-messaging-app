@@ -83,7 +83,7 @@ class _LoginPageState extends State<LoginPage> {
                 // welcome message
                 const SizedBox(height: 50),
                 Text(
-                  'Andreopoulos Chat for Athletes!',
+                  'Chat for Athletes!',
                   style: TextStyle(
                     fontSize: 20,
                     color: Theme.of(context).colorScheme.primary,
