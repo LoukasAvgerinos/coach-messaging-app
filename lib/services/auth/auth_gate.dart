@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:andreopoulos_messasing/services/auth/login_or_register.dart';
-import 'package:andreopoulos_messasing/pages/home_page.dart'; // Update path if needed
+import 'package:andreopoulos_messasing/pages/profile_check_page.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -24,9 +24,9 @@ class AuthGate extends StatelessWidget {
 
           // Check if user is logged in
           if (snapshot.hasData) {
-            // User is logged in
-            print('✅ AuthGate - User is logged in, showing HomePage');
-            return const HomePage();
+            // User is logged in - check if profile exists
+            print('✅ AuthGate - User is logged in, checking profile...');
+            return const ProfileCheckPage();
           } else {
             // User is not logged in
             print('❌ AuthGate - No user, showing LoginOrRegister');

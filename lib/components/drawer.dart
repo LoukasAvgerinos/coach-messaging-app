@@ -3,98 +3,82 @@ import 'package:flutter/material.dart';
 //import 'package:andreopoulos_messasing/pages/login_page.dart';
 import 'package:andreopoulos_messasing/services/auth/auth_service.dart';
 import '/pages/settings_page.dart';
+import '/pages/profile_page.dart';
+import '/pages/races_page.dart';
+import '/main.dart';
+import '/services/auth/auth_gate.dart';
 
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
 
-  // Logout method with confirmation dialog and proper navigation
-  // This method shows a confirmation dialog before logging out the user
-  Future<void> logout(BuildContext context) async {
-    // CRITICAL: Store the navigator BEFORE any async operations
-    // This prevents BuildContext errors after await
-    final navigator = Navigator.of(context, rootNavigator: true);
-
+  // Logout method with confirmation dialog
+  // Simply signs out - AuthGate's StreamBuilder will handle navigation automatically
+  void logout(BuildContext context) {
     // Show confirmation dialog to prevent accidental logouts
-    final bool? confirmLogout = await showDialog<bool>(
+    showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Confirm Logout'),
           content: const Text('Are you sure you want to logout?'),
           actions: [
-            // Cancel button - returns false
+            // Cancel button
             TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
-            // Logout button - returns true
+            // Logout button
             TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
+              onPressed: () async {
+                // Close confirmation dialog
+                Navigator.pop(dialogContext);
+
+                try {
+                  // Sign out from Firebase
+                  print('🔓 Signing out...');
+                  await AuthService().signOut();
+                  print('✅ Signed out successfully');
+
+                  // Use global navigator key to replace all routes with fresh AuthGate
+                  // This ensures a clean rebuild that detects the logged-out state
+                  navigatorKey.currentState?.pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const AuthGate()),
+                    (route) => false,
+                  );
+                  print('✅ Replaced all routes with fresh AuthGate - should show login');
+                } catch (e) {
+                  print('❌ Logout error: $e');
+
+                  // Show error dialog only if sign out fails
+                  if (context.mounted) {
+                    showDialog(
+                      context: context,
+                      builder: (errorContext) => AlertDialog(
+                        title: const Text('Logout Failed'),
+                        content: Text('Could not log out: $e'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(errorContext),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                }
               },
-              child: const Text('Logout', style: TextStyle(color: Colors.red)),
+              child: const Text(
+                'Logout',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         );
       },
     );
-
-    // If user didn't confirm, exit early
-    if (confirmLogout != true) {
-      print('❌ User cancelled logout');
-      return;
-    }
-
-    // Show loading dialog using the stored navigator
-    navigator.push(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (context) => const Scaffold(
-          backgroundColor: Colors.black54,
-          body: Center(child: CircularProgressIndicator()),
-        ),
-      ),
-    );
-
-    try {
-      // Sign out from Firebase
-      print('🔓 Starting logout process...');
-      await AuthService().signOut();
-      print('✅ Firebase signOut() completed');
-
-      // Close loading screen
-      navigator.pop();
-      print('✅ Closed loading screen');
-
-      // Pop all routes to get back to AuthGate (the root route)
-      // AuthGate will detect the auth state change and show login page
-      navigator.popUntil((route) => route.isFirst);
-      print('✅ Popped to root - AuthGate should now show login page');
-    } catch (e) {
-      print('❌ Logout error: $e');
-
-      // Close loading screen
-      navigator.pop();
-
-      // Show error dialog
-      await showDialog(
-        context: context,
-        builder: (errorContext) {
-          return AlertDialog(
-            title: const Text('Logout Failed'),
-            content: Text('Error: ${e.toString()}'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(errorContext).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
-    }
   }
 
   @override
@@ -139,6 +123,58 @@ class CustomDrawer extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => HomePage()),
+                );
+              },
+            ),
+          ),
+
+          // Profile list tile - Access athlete profile
+          Padding(
+            padding: const EdgeInsets.only(left: 25.0),
+            child: ListTile(
+              leading: Icon(
+                Icons.person,
+                color: Theme.of(context).colorScheme.secondary,
+              ),
+              title: Text(
+                'P R O F I L E',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
+              onTap: () {
+                // Close drawer first
+                Navigator.pop(context);
+                // Navigate to profile page
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ProfilePage()),
+                );
+              },
+            ),
+          ),
+
+          // Races list tile - NEW: Manage races
+          Padding(
+            padding: const EdgeInsets.only(left: 25.0),
+            child: ListTile(
+              leading: Icon(
+                Icons.emoji_events,
+                color: Theme.of(context).colorScheme.secondary,
+              ),
+              title: Text(
+                'M Y  R A C E S',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
+              onTap: () {
+                // Close drawer first
+                Navigator.pop(context);
+                // Navigate to races page
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const RacesPage()),
                 );
               },
             ),

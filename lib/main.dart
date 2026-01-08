@@ -6,6 +6,9 @@ import 'themes/theme_provider.dart';
 import 'services/auth/auth_gate.dart';
 import 'services/notification_service.dart';
 
+// Global navigator key - allows navigation from anywhere in the app
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -30,9 +33,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      // Add the global navigator key
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner:
           true, //at the final stage i'll do it false - DEBUG Sticker
-      home: AuthGate(),
+      home: const AuthGate(),
       theme: Provider.of<ThemeProvider>(context).themeData,
     );
   }
