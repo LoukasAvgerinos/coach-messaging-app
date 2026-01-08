@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner:
-          true, //at the final stage i'll do it true - DEBUG Sticker
+          true, //at the final stage i'll do it false - DEBUG Sticker
       home: AuthGate(),
       theme: Provider.of<ThemeProvider>(context).themeData,
     );

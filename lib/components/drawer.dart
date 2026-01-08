@@ -7,10 +7,94 @@ import '/pages/settings_page.dart';
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
 
-  void logout() {
-    //get auth service
-    final _auth = AuthService();
-    _auth.signOut();
+  // Logout method with confirmation dialog and proper navigation
+  // This method shows a confirmation dialog before logging out the user
+  Future<void> logout(BuildContext context) async {
+    // CRITICAL: Store the navigator BEFORE any async operations
+    // This prevents BuildContext errors after await
+    final navigator = Navigator.of(context, rootNavigator: true);
+
+    // Show confirmation dialog to prevent accidental logouts
+    final bool? confirmLogout = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Confirm Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            // Cancel button - returns false
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Cancel'),
+            ),
+            // Logout button - returns true
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('Logout', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+
+    // If user didn't confirm, exit early
+    if (confirmLogout != true) {
+      print('❌ User cancelled logout');
+      return;
+    }
+
+    // Show loading dialog using the stored navigator
+    navigator.push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => const Scaffold(
+          backgroundColor: Colors.black54,
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      ),
+    );
+
+    try {
+      // Sign out from Firebase
+      print('🔓 Starting logout process...');
+      await AuthService().signOut();
+      print('✅ Firebase signOut() completed');
+
+      // Close loading screen
+      navigator.pop();
+      print('✅ Closed loading screen');
+
+      // Pop all routes to get back to AuthGate (the root route)
+      // AuthGate will detect the auth state change and show login page
+      navigator.popUntil((route) => route.isFirst);
+      print('✅ Popped to root - AuthGate should now show login page');
+    } catch (e) {
+      print('❌ Logout error: $e');
+
+      // Close loading screen
+      navigator.pop();
+
+      // Show error dialog
+      await showDialog(
+        context: context,
+        builder: (errorContext) {
+          return AlertDialog(
+            title: const Text('Logout Failed'),
+            content: Text('Error: ${e.toString()}'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(errorContext).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
 
   @override
@@ -103,9 +187,11 @@ class CustomDrawer extends StatelessWidget {
                 ),
               ),
 
-              onTap: () async {
-                Navigator.pop(context); // Close drawer first
-                await AuthService().signOut(); // Sign out user
+              onTap: () {
+                // Close drawer first
+                Navigator.pop(context);
+                // Call logout method which handles confirmation and sign out
+                logout(context);
               },
             ),
           ),
