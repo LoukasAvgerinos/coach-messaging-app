@@ -25,7 +25,11 @@ class AuthService {
   }
 
   // sign up method
-  Future<UserCredential> signUpWithEmailPassword(String email, password) async {
+  Future<UserCredential> signUpWithEmailPassword(
+    String email,
+    String password,
+    String userType, // 'athlete' or 'coach'
+  ) async {
     try {
       // create user with email and password
       UserCredential userCredential = await _auth
@@ -35,6 +39,8 @@ class AuthService {
       _firestore.collection("Users").doc(userCredential.user!.uid).set({
         "email": email,
         "uid": userCredential.user!.uid,
+        "userType": userType, // Store the user role
+        "coachId": userType == 'athlete' ? null : null, // Will be set manually for athletes
         "createdAt": FieldValue.serverTimestamp(),
       });
 

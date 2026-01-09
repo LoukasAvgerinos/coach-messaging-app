@@ -1,10 +1,9 @@
-import 'package:andreopoulos_messasing/pages/home_page.dart';
 import 'package:flutter/material.dart';
-//import 'package:andreopoulos_messasing/pages/login_page.dart';
 import 'package:andreopoulos_messasing/services/auth/auth_service.dart';
 import '/pages/settings_page.dart';
 import '/pages/profile_page.dart';
 import '/pages/races_page.dart';
+import '/pages/athlete_messages_page.dart';
 import '/main.dart';
 import '/services/auth/auth_gate.dart';
 
@@ -102,16 +101,16 @@ class CustomDrawer extends StatelessWidget {
             ),
           ),
 
-          // Home list tile
+          // Messages list tile - Chat with coach
           Padding(
             padding: const EdgeInsets.only(left: 25.0),
             child: ListTile(
               leading: Icon(
-                Icons.home,
+                Icons.chat_bubble,
                 color: Theme.of(context).colorScheme.secondary,
               ),
               title: Text(
-                'H O M E',
+                'M E S S A G E S',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.secondary,
                 ),
@@ -119,10 +118,10 @@ class CustomDrawer extends StatelessWidget {
               onTap: () {
                 // Close drawer
                 Navigator.pop(context);
-                // Navigate to home page
+                // Navigate to athlete messages page
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => HomePage()),
+                  MaterialPageRoute(builder: (context) => const AthleteMessagesPage()),
                 );
               },
             ),

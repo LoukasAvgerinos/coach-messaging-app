@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import '../models/race_model.dart';
-import '../services/race_service.dart';
+import '../services/profile_service.dart';
 
 /// Race Edit Page - Add or edit a race
 /// If race parameter is null, creates a new race
 /// If race parameter is provided, edits existing race
 class RaceEditPage extends StatefulWidget {
+  final String athleteId; // Required: athlete ID
   final Race? race; // null = create new, not null = edit existing
 
-  const RaceEditPage({super.key, this.race});
+  const RaceEditPage({
+    super.key,
+    required this.athleteId,
+    this.race,
+  });
 
   @override
   State<RaceEditPage> createState() => _RaceEditPageState();
@@ -16,7 +21,7 @@ class RaceEditPage extends StatefulWidget {
 
 class _RaceEditPageState extends State<RaceEditPage> {
   final _formKey = GlobalKey<FormState>();
-  final RaceService _raceService = RaceService();
+  final ProfileService _profileService = ProfileService();
 
   // Form controllers
   late TextEditingController _nameController;
@@ -391,24 +396,33 @@ class _RaceEditPageState extends State<RaceEditPage> {
     try {
       final isEditing = widget.race != null;
 
+      // Create Race object
+      Race race = Race(
+        raceId: widget.race?.raceId ??
+            'race_${widget.athleteId}_${DateTime.now().millisecondsSinceEpoch}',
+        athleteId: widget.athleteId,
+        raceName: _nameController.text.trim(),
+        raceDate: _selectedDate!,
+        raceType: _selectedType,
+        priority: _selectedPriority,
+        location: _locationController.text.trim().isEmpty
+            ? null
+            : _locationController.text.trim(),
+        distance: _distanceController.text.trim().isEmpty
+            ? null
+            : _distanceController.text.trim(),
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
+        status: widget.race?.status ?? 'upcoming',
+        result: widget.race?.result,
+        createdAt: widget.race?.createdAt ?? DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
       if (isEditing) {
         // Update existing race
-        await _raceService.updateRace(
-          raceId: widget.race!.raceId,
-          raceName: _nameController.text.trim(),
-          raceDate: _selectedDate,
-          raceType: _selectedType,
-          priority: _selectedPriority,
-          location: _locationController.text.trim().isEmpty
-              ? null
-              : _locationController.text.trim(),
-          distance: _distanceController.text.trim().isEmpty
-              ? null
-              : _distanceController.text.trim(),
-          notes: _notesController.text.trim().isEmpty
-              ? null
-              : _notesController.text.trim(),
-        );
+        await _profileService.updateRace(race);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -421,21 +435,7 @@ class _RaceEditPageState extends State<RaceEditPage> {
         }
       } else {
         // Create new race
-        await _raceService.createRace(
-          raceName: _nameController.text.trim(),
-          raceDate: _selectedDate!,
-          raceType: _selectedType,
-          priority: _selectedPriority,
-          location: _locationController.text.trim().isEmpty
-              ? null
-              : _locationController.text.trim(),
-          distance: _distanceController.text.trim().isEmpty
-              ? null
-              : _distanceController.text.trim(),
-          notes: _notesController.text.trim().isEmpty
-              ? null
-              : _notesController.text.trim(),
-        );
+        await _profileService.createRace(race);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

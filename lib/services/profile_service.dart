@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/athlete_profile_model.dart';
+import '../models/race_model.dart';
 
 /// Service για διαχείριση Athlete Profiles στο Firestore
 class ProfileService {
@@ -186,6 +187,43 @@ class ProfileService {
         });
   }
 
+  /// Get athletes assigned to a specific coach
+  Stream<List<AthleteProfile>> getAthletesByCoach(String coachId) {
+    return _firestore
+        .collection(_athletesCollection)
+        .orderBy('surname')
+        .snapshots()
+        .asyncMap((snapshot) async {
+      // Get all athletes
+      List<AthleteProfile> allAthletes = snapshot.docs
+          .map((doc) => AthleteProfile.fromFirestore(doc))
+          .toList();
+
+      // Filter by coachId from Users collection
+      List<AthleteProfile> coachAthletes = [];
+
+      for (var athlete in allAthletes) {
+        // Check if this athlete's coachId matches
+        DocumentSnapshot userDoc = await _firestore
+            .collection('Users')
+            .doc(athlete.userId)
+            .get();
+
+        if (userDoc.exists) {
+          String? athleteCoachId = userDoc.data() != null
+              ? (userDoc.data() as Map<String, dynamic>)['coachId']
+              : null;
+
+          if (athleteCoachId == coachId) {
+            coachAthletes.add(athlete);
+          }
+        }
+      }
+
+      return coachAthletes;
+    });
+  }
+
   /// Search athletes by name
   Future<List<AthleteProfile>> searchAthletes(String searchTerm) async {
     try {
@@ -228,6 +266,130 @@ class ProfileService {
     } catch (e) {
       print('❌ Error deleting athlete profile: $e');
       throw Exception('Failed to delete profile: $e');
+    }
+  }
+
+  // ==========================================
+  // RACE OPERATIONS
+  // ==========================================
+
+  /// Create a new race
+  Future<void> createRace(Race race) async {
+    try {
+      await _firestore.collection('races').doc(race.raceId).set(race.toMap());
+      print('✅ Race created: ${race.raceId}');
+    } catch (e) {
+      print('❌ Error creating race: $e');
+      throw Exception('Failed to create race: $e');
+    }
+  }
+
+  /// Update an existing race
+  Future<void> updateRace(Race race) async {
+    try {
+      await _firestore
+          .collection('races')
+          .doc(race.raceId)
+          .update(race.toMap());
+      print('✅ Race updated: ${race.raceId}');
+    } catch (e) {
+      print('❌ Error updating race: $e');
+      throw Exception('Failed to update race: $e');
+    }
+  }
+
+  /// Delete a race
+  Future<void> deleteRace(String raceId) async {
+    try {
+      await _firestore.collection('races').doc(raceId).delete();
+      print('✅ Race deleted: $raceId');
+    } catch (e) {
+      print('❌ Error deleting race: $e');
+      throw Exception('Failed to delete race: $e');
+    }
+  }
+
+  /// Get races for a specific athlete
+  Stream<List<Race>> getRacesByAthlete(String athleteId) {
+    return _firestore
+        .collection('races')
+        .where('athleteId', isEqualTo: athleteId)
+        .orderBy('raceDate', descending: false)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => Race.fromFirestore(doc)).toList();
+    });
+  }
+
+  /// Get upcoming races for a specific athlete
+  Stream<List<Race>> getUpcomingRacesByAthlete(String athleteId) {
+    return _firestore
+        .collection('races')
+        .where('athleteId', isEqualTo: athleteId)
+        .where('status', isEqualTo: 'upcoming')
+        .orderBy('raceDate', descending: false)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => Race.fromFirestore(doc)).toList();
+    });
+  }
+
+  /// Get all races for athletes assigned to a coach
+  Stream<List<Race>> getRacesByCoach(String coachId) {
+    return _firestore
+        .collection('races')
+        .orderBy('raceDate', descending: false)
+        .snapshots()
+        .asyncMap((snapshot) async {
+      List<Race> allRaces =
+          snapshot.docs.map((doc) => Race.fromFirestore(doc)).toList();
+
+      // Filter races for athletes assigned to this coach
+      List<Race> coachRaces = [];
+
+      for (var race in allRaces) {
+        // Get athlete's profile to get userId
+        DocumentSnapshot athleteDoc = await _firestore
+            .collection(_athletesCollection)
+            .doc(race.athleteId)
+            .get();
+
+        if (athleteDoc.exists) {
+          String userId = (athleteDoc.data() as Map<String, dynamic>)['userId'];
+
+          // Check if this athlete's coachId matches
+          DocumentSnapshot userDoc =
+              await _firestore.collection('Users').doc(userId).get();
+
+          if (userDoc.exists) {
+            String? athleteCoachId = userDoc.data() != null
+                ? (userDoc.data() as Map<String, dynamic>)['coachId']
+                : null;
+
+            if (athleteCoachId == coachId) {
+              coachRaces.add(race);
+            }
+          }
+        }
+      }
+
+      return coachRaces;
+    });
+  }
+
+  /// Get a single race by ID
+  Future<Race?> getRace(String raceId) async {
+    try {
+      DocumentSnapshot doc =
+          await _firestore.collection('races').doc(raceId).get();
+
+      if (doc.exists) {
+        return Race.fromFirestore(doc);
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error getting race: $e');
+      return null;
     }
   }
 }

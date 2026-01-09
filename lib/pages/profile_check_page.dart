@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/profile_service.dart';
 import 'home_page.dart';
 import 'profile_edit_page.dart';
+import 'coach_dashboard_page.dart';
 
 /// ProfileCheckPage - Checks if user has a profile and redirects accordingly
 /// This page is shown right after login to ensure user has completed their profile
@@ -24,7 +26,7 @@ class _ProfileCheckPageState extends State<ProfileCheckPage> {
     _checkProfile();
   }
 
-  /// Check if the current user has an athlete profile
+  /// Check if the current user has an athlete profile or is a coach
   Future<void> _checkProfile() async {
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
@@ -39,7 +41,35 @@ class _ProfileCheckPageState extends State<ProfileCheckPage> {
         return;
       }
 
-      // Check if profile exists
+      // First, check user role from Firestore Users collection
+      final userDoc = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(userId)
+          .get();
+
+      if (!userDoc.exists) {
+        // User document doesn't exist, go to home page
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const HomePage()),
+          );
+        }
+        return;
+      }
+
+      final userType = userDoc.data()?['userType'] as String?;
+
+      // If user is a coach, go directly to coach dashboard
+      if (userType == 'coach') {
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const CoachDashboardPage()),
+          );
+        }
+        return;
+      }
+
+      // If user is an athlete, check if profile exists
       final profileExists = await _profileService.athleteProfileExists(userId);
 
       setState(() {

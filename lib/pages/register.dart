@@ -21,6 +21,9 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
+  // User role selection: 'athlete' or 'coach'
+  String _selectedRole = 'athlete'; // Default to athlete
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -61,6 +64,7 @@ class _RegisterPageState extends State<RegisterPage> {
       await _auth.signUpWithEmailPassword(
         _emailController.text,
         _passwordController.text,
+        _selectedRole, // Pass the selected role
       );
     } catch (e) {
       // show error message
@@ -111,7 +115,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 // welcome message
                 const SizedBox(height: 50),
                 Text(
-                  'Create Your Athlete Account!',
+                  'Create Your Account!',
                   style: TextStyle(
                     fontSize: 20,
                     color: Theme.of(context).colorScheme.primary,
@@ -120,6 +124,128 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
 
                 const SizedBox(height: 30),
+
+                // Role selection
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondary,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'I am a:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _selectedRole = 'athlete';
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: _selectedRole == 'athlete'
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context).colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: Theme.of(context).colorScheme.primary,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.sports_gymnastics,
+                                      color: _selectedRole == 'athlete'
+                                          ? Theme.of(context).colorScheme.secondary
+                                          : Theme.of(context).colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Athlete',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: _selectedRole == 'athlete'
+                                            ? Theme.of(context).colorScheme.secondary
+                                            : Theme.of(context).colorScheme.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _selectedRole = 'coach';
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: _selectedRole == 'coach'
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context).colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: Theme.of(context).colorScheme.primary,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.sports_soccer,
+                                      color: _selectedRole == 'coach'
+                                          ? Theme.of(context).colorScheme.secondary
+                                          : Theme.of(context).colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Coach',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: _selectedRole == 'coach'
+                                            ? Theme.of(context).colorScheme.secondary
+                                            : Theme.of(context).colorScheme.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 25),
 
                 //email textfield
                 MyTextField(hintText: "Email", controller: _emailController),

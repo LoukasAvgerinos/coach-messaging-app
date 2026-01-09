@@ -175,6 +175,11 @@ class ProfilePage extends StatelessWidget {
 
           const SizedBox(height: 16),
 
+          // Performance Metrics (Coach-controlled)
+          _buildPerformanceMetricsSection(context, profile),
+
+          const SizedBox(height: 16),
+
           // Physical Metrics
           _buildSection(
             context,
@@ -304,6 +309,117 @@ class ProfilePage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  /// Build Performance Metrics section (Coach-controlled)
+  Widget _buildPerformanceMetricsSection(
+    BuildContext context,
+    AthleteProfile profile,
+  ) {
+    final profileService = ProfileService();
+
+    return StreamBuilder<PerformanceMetrics?>(
+      stream: profileService.streamPerformanceMetrics(profile.athleteId),
+      builder: (context, snapshot) {
+        final metrics = snapshot.data;
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.secondary,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+              width: 2,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Section header with lock icon
+              Row(
+                children: [
+                  Icon(
+                    Icons.speed,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Performance Metrics',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    Icons.lock,
+                    color: Theme.of(context).colorScheme.inversePrimary,
+                    size: 20,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // Coach-only note
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.inversePrimary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'These values are set by your coach',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: Theme.of(context).colorScheme.inversePrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // FTP
+              _buildInfoRow(
+                'FTP (Functional Threshold Power)',
+                metrics?.ftp != null ? '${metrics!.ftp} watts' : 'Not set by coach',
+              ),
+              // FTHR
+              _buildInfoRow(
+                'FTHR (Functional Threshold Heart Rate)',
+                metrics?.fthr != null ? '${metrics!.fthr} bpm' : 'Not set by coach',
+              ),
+              // Last updated
+              if (metrics?.lastUpdated != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Last updated by coach: ${_formatDate(metrics!.lastUpdated!)}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.inversePrimary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
