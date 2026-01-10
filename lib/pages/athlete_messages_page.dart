@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/chat/chat_services.dart';
 import 'chat_page.dart';
 
@@ -93,98 +94,242 @@ class AthleteMessagesPage extends StatelessWidget {
           final coachData = snapshot.data!;
           final coachEmail = coachData['email'] as String;
           final coachId = coachData['uid'] as String;
+          final athleteId = userId;
 
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Section header
-                Text(
-                  'Your Coach',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 16),
+          // Stream chat room metadata to get unread count and last message
+          return StreamBuilder<Map<String, dynamic>?>(
+            stream: chatService.streamChatRoomMetadata(athleteId, coachId),
+            builder: (context, metadataSnapshot) {
+              // Extract metadata
+              final metadata = metadataSnapshot.data;
+              final lastMessage = metadata?['lastMessage'] as String?;
+              final unreadCount = metadata?['unreadCount_$athleteId'] as int? ?? 0;
+              final lastMessageTime = metadata?['lastMessageTime'] as Timestamp?;
 
-                // Coach card
-                Card(
-                  elevation: 3,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () {
-                      // Navigate to chat page
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ChatPage(
-                            receiverEmail: coachEmail,
-                            receiverId: coachId,
+              // Format subtitle
+              String subtitle = lastMessage ?? 'Tap to start messaging';
+              if (lastMessage != null && lastMessage.length > 50) {
+                subtitle = '${lastMessage.substring(0, 50)}...';
+              }
+
+              // Format time
+              String timeString = '';
+              if (lastMessageTime != null) {
+                timeString = _formatTimestamp(lastMessageTime);
+              }
+
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Section header with unread indicator
+                    Row(
+                      children: [
+                        Text(
+                          'Your Coach',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
-                      );
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Row(
-                        children: [
-                          // Coach avatar
-                          CircleAvatar(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primary,
-                            radius: 35,
-                            child: Icon(
-                              Icons.person,
-                              size: 40,
-                              color: Theme.of(context).colorScheme.secondary,
+                        if (unreadCount > 0) ...[
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '$unreadCount new',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 20),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 16),
 
-                          // Coach info
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  coachEmail,
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.primary,
+                    // Coach card with enhanced UI
+                    Card(
+                      elevation: unreadCount > 0 ? 4 : 3,
+                      color: unreadCount > 0
+                          ? Theme.of(context).colorScheme.secondary
+                          : null,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: unreadCount > 0
+                            ? BorderSide(
+                                color: Theme.of(context).colorScheme.primary,
+                                width: 2,
+                              )
+                            : BorderSide.none,
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          // Navigate to chat page
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ChatPage(
+                                receiverEmail: coachEmail,
+                                receiverId: coachId,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  // Coach avatar with badge
+                                  Stack(
+                                    children: [
+                                      CircleAvatar(
+                                        backgroundColor:
+                                            Theme.of(context).colorScheme.primary,
+                                        radius: 35,
+                                        child: Icon(
+                                          Icons.person,
+                                          size: 40,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .secondary,
+                                        ),
+                                      ),
+                                      if (unreadCount > 0)
+                                        Positioned(
+                                          right: 0,
+                                          top: 0,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: const BoxDecoration(
+                                              color: Colors.red,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            constraints: const BoxConstraints(
+                                              minWidth: 24,
+                                              minHeight: 24,
+                                            ),
+                                            child: Text(
+                                              unreadCount > 99
+                                                  ? '99+'
+                                                  : '$unreadCount',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Tap to message',
-                                  style: TextStyle(
-                                    fontSize: 14,
+                                  const SizedBox(width: 20),
+
+                                  // Coach info
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          coachEmail,
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: unreadCount > 0
+                                                ? FontWeight.bold
+                                                : FontWeight.w600,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                          ),
+                                        ),
+                                        if (timeString.isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            timeString,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .inversePrimary,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+
+                                  // Message icon
+                                  Icon(
+                                    unreadCount > 0
+                                        ? Icons.mark_chat_unread
+                                        : Icons.chat_bubble,
+                                    size: 32,
+                                    color: unreadCount > 0
+                                        ? Colors.red
+                                        : Theme.of(context).colorScheme.primary,
+                                  ),
+                                ],
+                              ),
+                              if (lastMessage != null) ...[
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
                                     color: Theme.of(context)
                                         .colorScheme
-                                        .inversePrimary,
+                                        .surface
+                                        .withOpacity(0.5),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.message,
+                                        size: 16,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .inversePrimary,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          subtitle,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .inversePrimary,
+                                            fontWeight: unreadCount > 0
+                                                ? FontWeight.w500
+                                                : FontWeight.normal,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
-                            ),
+                            ],
                           ),
-
-                          // Message icon
-                          Icon(
-                            Icons.chat_bubble,
-                            size: 32,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
 
                 const SizedBox(height: 24),
 
@@ -219,11 +364,32 @@ class AthleteMessagesPage extends StatelessWidget {
                     ],
                   ),
                 ),
-              ],
-            ),
-          );
-        },
-      ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    ),
     );
+  }
+}
+
+/// Format timestamp to readable string
+String _formatTimestamp(Timestamp timestamp) {
+  final DateTime dateTime = timestamp.toDate();
+  final DateTime now = DateTime.now();
+  final Duration difference = now.difference(dateTime);
+
+  if (difference.inMinutes < 1) {
+    return 'Just now';
+  } else if (difference.inHours < 1) {
+    return '${difference.inMinutes}m ago';
+  } else if (difference.inHours < 24) {
+    return '${difference.inHours}h ago';
+  } else if (difference.inDays < 7) {
+    return '${difference.inDays}d ago';
+  } else {
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
   }
 }

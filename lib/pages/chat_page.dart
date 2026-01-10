@@ -30,9 +30,24 @@ class _ChatPageState extends State<ChatPage> {
   int _lastMessageCount = 0;
 
   @override
+  void initState() {
+    super.initState();
+    // Mark messages as read when the chat is opened
+    _markMessagesAsRead();
+  }
+
+  @override
   void dispose() {
     _messageController.dispose();
     super.dispose();
+  }
+
+  /// Mark all messages in this chat as read for the current user
+  void _markMessagesAsRead() async {
+    final currentUserId = _authService.currentUser?.uid;
+    if (currentUserId != null) {
+      await _chatService.markMessagesAsRead(currentUserId, widget.receiverId);
+    }
   }
 
   void sendMessage() async {

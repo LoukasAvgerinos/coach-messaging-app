@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/chat/chat_services.dart';
 import '../services/profile_service.dart';
 import '../models/athlete_profile_model.dart';
@@ -120,73 +121,154 @@ class _CoachMessagesPageState extends State<CoachMessagesPage> {
       BuildContext context, Map<String, dynamic> athleteUser) {
     final athleteUserId = athleteUser['uid'] as String;
     final athleteEmail = athleteUser['email'] as String;
+    final coachId = FirebaseAuth.instance.currentUser!.uid;
 
     return FutureBuilder<AthleteProfile?>(
       future: _getAthleteProfile(athleteUserId),
       builder: (context, profileSnapshot) {
         // Default to email if profile not loaded
         String displayName = athleteEmail;
-        String subtitle = 'Tap to message';
 
         if (profileSnapshot.hasData && profileSnapshot.data != null) {
           final profile = profileSnapshot.data!;
           displayName = profile.fullName;
-          subtitle = profile.email;
         }
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: CircleAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              radius: 28,
-              child: Text(
-                _getInitials(displayName),
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.secondary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
+        // Stream chat room metadata for this athlete
+        return StreamBuilder<Map<String, dynamic>?>(
+          stream: _chatService.streamChatRoomMetadata(coachId, athleteUserId),
+          builder: (context, metadataSnapshot) {
+            // Extract metadata
+            final metadata = metadataSnapshot.data;
+            final lastMessage = metadata?['lastMessage'] as String?;
+            final unreadCount = metadata?['unreadCount_$coachId'] as int? ?? 0;
+            final lastMessageTime = metadata?['lastMessageTime'] as Timestamp?;
+
+            // Format subtitle
+            String subtitle = lastMessage ?? 'No messages yet';
+            if (lastMessage != null && lastMessage.length > 40) {
+              subtitle = '${lastMessage.substring(0, 40)}...';
+            }
+
+            // Format time
+            String timeString = '';
+            if (lastMessageTime != null) {
+              timeString = _formatTimestamp(lastMessageTime);
+            }
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              elevation: unreadCount > 0 ? 4 : 2,
+              color: unreadCount > 0
+                  ? Theme.of(context).colorScheme.secondary
+                  : null,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: unreadCount > 0
+                    ? BorderSide(
+                        color: Theme.of(context).colorScheme.primary,
+                        width: 2,
+                      )
+                    : BorderSide.none,
+              ),
+              child: ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                leading: Stack(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      radius: 28,
+                      child: Text(
+                        _getInitials(displayName),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.secondary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                    // Unread badge
+                    if (unreadCount > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 20,
+                            minHeight: 20,
+                          ),
+                          child: Text(
+                            unreadCount > 99 ? '99+' : '$unreadCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              ),
-            ),
-            title: Text(
-              displayName,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            subtitle: Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.inversePrimary,
-              ),
-            ),
-            trailing: Icon(
-              Icons.chat_bubble_outline,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            onTap: () {
-              // Navigate to chat page
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ChatPage(
-                    receiverEmail: athleteEmail,
-                    receiverId: athleteUserId,
+                title: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        displayName,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: unreadCount > 0
+                              ? FontWeight.bold
+                              : FontWeight.w600,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    if (timeString.isNotEmpty)
+                      Text(
+                        timeString,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.inversePrimary,
+                        ),
+                      ),
+                  ],
+                ),
+                subtitle: Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.inversePrimary,
+                    fontWeight: unreadCount > 0 ? FontWeight.w500 : FontWeight.normal,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              );
-            },
-          ),
+                trailing: Icon(
+                  unreadCount > 0 ? Icons.mark_chat_unread : Icons.chat_bubble_outline,
+                  color: unreadCount > 0 ? Colors.red : Theme.of(context).colorScheme.primary,
+                ),
+                onTap: () {
+                  // Navigate to chat page
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ChatPage(
+                        receiverEmail: athleteEmail,
+                        receiverId: athleteUserId,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
         );
       },
     );
@@ -218,5 +300,24 @@ class _CoachMessagesPageState extends State<CoachMessagesPage> {
       return parts[0][0].toUpperCase();
     }
     return '?';
+  }
+
+  /// Format timestamp to readable string
+  String _formatTimestamp(Timestamp timestamp) {
+    final DateTime dateTime = timestamp.toDate();
+    final DateTime now = DateTime.now();
+    final Duration difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else {
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    }
   }
 }

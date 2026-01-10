@@ -43,6 +43,86 @@ class ChatService {
         .doc(chatRoomId)
         .collection("messages")
         .add(newMessage);
+
+    // Update chat room metadata
+    await _updateChatRoomMetadata(
+      chatRoomId: chatRoomId,
+      lastMessage: message,
+      lastMessageTime: timestamp,
+      senderId: currentUserId,
+      receiverId: receiverId,
+    );
+  }
+
+  /// Update chat room metadata (last message, timestamps, unread counts)
+  Future<void> _updateChatRoomMetadata({
+    required String chatRoomId,
+    required String lastMessage,
+    required Timestamp lastMessageTime,
+    required String senderId,
+    required String receiverId,
+  }) async {
+    final chatRoomRef = _firestore.collection("chat_rooms").doc(chatRoomId);
+
+    // Get current unread counts
+    final chatRoomDoc = await chatRoomRef.get();
+    final data = chatRoomDoc.data() ?? {};
+
+    // Increment unread count for receiver
+    int receiverUnreadCount = (data['unreadCount_$receiverId'] ?? 0) + 1;
+
+    // Update metadata
+    await chatRoomRef.set({
+      'lastMessage': lastMessage,
+      'lastMessageTime': lastMessageTime,
+      'lastMessageSenderId': senderId,
+      'unreadCount_$senderId': 0, // Sender has no unread messages
+      'unreadCount_$receiverId': receiverUnreadCount, // Increment for receiver
+      'participants': [senderId, receiverId],
+    }, SetOptions(merge: true));
+  }
+
+  /// Mark all messages as read for current user in a chat room
+  Future<void> markMessagesAsRead(String currentUserId, String otherUserId) async {
+    List<String> ids = [currentUserId, otherUserId];
+    ids.sort();
+    String chatRoomId = ids.join('_');
+
+    final chatRoomRef = _firestore.collection("chat_rooms").doc(chatRoomId);
+
+    // Reset unread count for current user
+    await chatRoomRef.set({
+      'unreadCount_$currentUserId': 0,
+    }, SetOptions(merge: true));
+  }
+
+  /// Get unread count for a specific chat room
+  Future<int> getUnreadCount(String currentUserId, String otherUserId) async {
+    List<String> ids = [currentUserId, otherUserId];
+    ids.sort();
+    String chatRoomId = ids.join('_');
+
+    final chatRoomDoc =
+        await _firestore.collection("chat_rooms").doc(chatRoomId).get();
+
+    if (!chatRoomDoc.exists) return 0;
+
+    final data = chatRoomDoc.data();
+    return data?['unreadCount_$currentUserId'] ?? 0;
+  }
+
+  /// Stream chat room metadata for a specific chat
+  Stream<Map<String, dynamic>?> streamChatRoomMetadata(
+      String currentUserId, String otherUserId) {
+    List<String> ids = [currentUserId, otherUserId];
+    ids.sort();
+    String chatRoomId = ids.join('_');
+
+    return _firestore
+        .collection("chat_rooms")
+        .doc(chatRoomId)
+        .snapshots()
+        .map((doc) => doc.data());
   }
 
   // Get messages
