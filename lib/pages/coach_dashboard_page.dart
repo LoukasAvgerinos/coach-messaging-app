@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/profile_service.dart';
 import '../services/auth/auth_service.dart';
 import '../services/auth/auth_gate.dart';
+import '../services/chat/chat_services.dart';
 import '../models/athlete_profile_model.dart';
 import '../main.dart';
 import 'coach_athlete_list_page.dart';
@@ -239,18 +240,28 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
 
               const SizedBox(height: 12),
 
-              // Messages button
-              _buildActionButton(
-                context,
-                'Messages',
-                Icons.chat_bubble,
-                'Chat with your assigned athletes',
-                () {
-                  Navigator.push(
+              // Messages button with unread badge
+              StreamBuilder<int>(
+                stream: coachId != null
+                    ? ChatService().streamTotalUnreadCount(coachId)
+                    : Stream.value(0),
+                builder: (context, snapshot) {
+                  final unreadCount = snapshot.data ?? 0;
+
+                  return _buildActionButtonWithBadge(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const CoachMessagesPage(),
-                    ),
+                    'Messages',
+                    Icons.chat_bubble,
+                    'Chat with your assigned athletes',
+                    unreadCount,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CoachMessagesPage(),
+                        ),
+                      );
+                    },
                   );
                 },
               ),
@@ -331,6 +342,97 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                 icon,
                 size: 32,
                 color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Theme.of(context).colorScheme.inversePrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtonWithBadge(
+    BuildContext context,
+    String title,
+    IconData icon,
+    String description,
+    int badgeCount,
+    VoidCallback onTap,
+  ) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    icon,
+                    size: 32,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  if (badgeCount > 0)
+                    Positioned(
+                      right: -8,
+                      top: -8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 20,
+                          minHeight: 20,
+                        ),
+                        child: Text(
+                          badgeCount > 99 ? '99+' : '$badgeCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(width: 16),
               Expanded(

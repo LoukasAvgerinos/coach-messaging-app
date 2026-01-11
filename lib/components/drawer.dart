@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:andreopoulos_messasing/services/auth/auth_service.dart';
 import '/pages/settings_page.dart';
 import '/pages/profile_page.dart';
 import '/pages/races_page.dart';
 import '/pages/athlete_messages_page.dart';
+import '/services/chat/chat_services.dart';
 import '/main.dart';
 import '/services/auth/auth_gate.dart';
 
@@ -104,24 +106,65 @@ class CustomDrawer extends StatelessWidget {
           // Messages list tile - Chat with coach
           Padding(
             padding: const EdgeInsets.only(left: 25.0),
-            child: ListTile(
-              leading: Icon(
-                Icons.chat_bubble,
-                color: Theme.of(context).colorScheme.secondary,
-              ),
-              title: Text(
-                'M E S S A G E S',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.secondary,
-                ),
-              ),
-              onTap: () {
-                // Close drawer
-                Navigator.pop(context);
-                // Navigate to athlete messages page
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AthleteMessagesPage()),
+            child: StreamBuilder<int>(
+              stream: FirebaseAuth.instance.currentUser?.uid != null
+                  ? ChatService().streamTotalUnreadCount(
+                      FirebaseAuth.instance.currentUser!.uid)
+                  : Stream.value(0),
+              builder: (context, snapshot) {
+                final unreadCount = snapshot.data ?? 0;
+
+                return ListTile(
+                  leading: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Icon(
+                        Icons.chat_bubble,
+                        color: Theme.of(context).colorScheme.secondary,
+                      ),
+                      if (unreadCount > 0)
+                        Positioned(
+                          right: -6,
+                          top: -6,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 18,
+                              minHeight: 18,
+                            ),
+                            child: Text(
+                              unreadCount > 99 ? '99+' : '$unreadCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  title: Text(
+                    'M E S S A G E S',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                  ),
+                  onTap: () {
+                    // Close drawer
+                    Navigator.pop(context);
+                    // Navigate to athlete messages page
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const AthleteMessagesPage()),
+                    );
+                  },
                 );
               },
             ),

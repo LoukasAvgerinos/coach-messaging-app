@@ -2,11 +2,19 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Top-level function to handle background messages
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  print('Handling a background message: ${message.messageId}');
+  print('🔔 [BACKGROUND] Handling a background message: ${message.messageId}');
+  print('   Title: ${message.notification?.title}');
+  print('   Body: ${message.notification?.body}');
+
+  // Note: This is called when app is in background/terminated
+  // Local notifications are handled by the OS automatically
+  // We just log here for debugging
 }
 
 class NotificationService {
@@ -120,17 +128,54 @@ class NotificationService {
         print('FCM Token: $_fcmToken');
       }
 
+      // Save token to Firestore for current user
+      if (_fcmToken != null) {
+        await _saveFCMTokenToFirestore(_fcmToken!);
+      }
+
       // Listen to token refresh
-      _fcm.onTokenRefresh.listen((newToken) {
+      _fcm.onTokenRefresh.listen((newToken) async {
         _fcmToken = newToken;
         if (kDebugMode) {
           print('FCM Token refreshed: $newToken');
         }
-        // TODO: Send token to your backend server
+        // Save refreshed token to Firestore
+        await _saveFCMTokenToFirestore(newToken);
       });
     } catch (e) {
       if (kDebugMode) {
         print('Error getting FCM token: $e');
+      }
+    }
+  }
+
+  // Save FCM token to Firestore
+  Future<void> _saveFCMTokenToFirestore(String token) async {
+    try {
+      // Get current user ID
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        if (kDebugMode) {
+          print('Cannot save FCM token: No user logged in');
+        }
+        return;
+      }
+
+      // Save token to Users collection
+      await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(user.uid)
+          .set({
+        'fcmToken': token,
+        'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      if (kDebugMode) {
+        print('✅ FCM token saved to Firestore for user: ${user.uid}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error saving FCM token to Firestore: $e');
       }
     }
   }
@@ -175,7 +220,7 @@ class NotificationService {
     });
   }
 
-  // Show local notification
+  // Show local notification from FCM message
   Future<void> _showLocalNotification(RemoteMessage message) async {
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
@@ -208,6 +253,46 @@ class NotificationService {
       message.notification?.body ?? 'You have a new message',
       notificationDetails,
       payload: message.data.toString(),
+    );
+  }
+
+  // Show local notification with custom title and body (public method)
+  Future<void> showLocalNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'high_importance_channel',
+          'High Importance Notifications',
+          channelDescription:
+              'This channel is used for important notifications.',
+          importance: Importance.high,
+          priority: Priority.high,
+          showWhen: true,
+          enableVibration: true,
+          playSound: false, // We play sound manually
+        );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: false, // We play sound manually
+    );
+
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+      macOS: iosDetails,
+    );
+
+    await _localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title,
+      body,
+      notificationDetails,
+      payload: payload,
     );
   }
 

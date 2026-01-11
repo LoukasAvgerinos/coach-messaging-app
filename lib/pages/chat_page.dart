@@ -29,17 +29,56 @@ class _ChatPageState extends State<ChatPage> {
   // ⭐ THIS VARIABLE MUST BE HERE!
   int _lastMessageCount = 0;
 
+  // Typing indicator variables
+  bool _isTyping = false;
+  DateTime? _lastTypingTime;
+
   @override
   void initState() {
     super.initState();
     // Mark messages as read when the chat is opened
     _markMessagesAsRead();
+
+    // Listen to text changes for typing indicator
+    _messageController.addListener(_onTextChanged);
   }
 
   @override
   void dispose() {
+    _messageController.removeListener(_onTextChanged);
     _messageController.dispose();
+    // Clear typing status when leaving chat
+    _setTypingStatus(false);
     super.dispose();
+  }
+
+  /// Handle text field changes for typing indicator
+  void _onTextChanged() {
+    final currentUserId = _authService.currentUser?.uid;
+    if (currentUserId == null) return;
+
+    final hasText = _messageController.text.trim().isNotEmpty;
+    final now = DateTime.now();
+
+    // If user is typing and last update was more than 2 seconds ago, update status
+    if (hasText && (!_isTyping || (_lastTypingTime != null && now.difference(_lastTypingTime!).inSeconds >= 2))) {
+      _isTyping = true;
+      _lastTypingTime = now;
+      _setTypingStatus(true);
+    } else if (!hasText && _isTyping) {
+      // User cleared text, stop typing indicator
+      _isTyping = false;
+      _setTypingStatus(false);
+    }
+  }
+
+  /// Update typing status in Firestore
+  void _setTypingStatus(bool isTyping) async {
+    final currentUserId = _authService.currentUser?.uid;
+    if (currentUserId != null) {
+      await _chatService.setTypingStatus(
+          currentUserId, widget.receiverId, isTyping);
+    }
   }
 
   /// Mark all messages in this chat as read for the current user
@@ -53,6 +92,10 @@ class _ChatPageState extends State<ChatPage> {
   void sendMessage() async {
     final String message = _messageController.text.trim();
     if (message.isNotEmpty) {
+      // Clear typing status before sending
+      _setTypingStatus(false);
+      _isTyping = false;
+
       await _chatService.sendMessage(widget.receiverId, message);
       _messageController.clear();
     }
@@ -60,9 +103,37 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUserId = _authService.currentUser?.uid;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.receiverEmail),
+        title: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(widget.receiverEmail),
+            if (currentUserId != null)
+              StreamBuilder<bool>(
+                stream: _chatService.streamTypingStatus(
+                    currentUserId, widget.receiverId),
+                builder: (context, snapshot) {
+                  final isTyping = snapshot.data ?? false;
+                  if (!isTyping) return const SizedBox.shrink();
+
+                  return Text(
+                    'typing...',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .secondary
+                          .withOpacity(0.8),
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
         centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.secondary,

@@ -125,6 +125,65 @@ class ChatService {
         .map((doc) => doc.data());
   }
 
+  /// Get total unread count across all chats for a user
+  /// Used for badge on Messages navigation item
+  Stream<int> streamTotalUnreadCount(String userId) {
+    return _firestore
+        .collection("chat_rooms")
+        .where('participants', arrayContains: userId)
+        .snapshots()
+        .map((snapshot) {
+      int totalUnread = 0;
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        totalUnread += (data['unreadCount_$userId'] ?? 0) as int;
+      }
+      return totalUnread;
+    });
+  }
+
+  /// Update typing status for a user in a chat
+  Future<void> setTypingStatus(
+      String userId, String otherUserId, bool isTyping) async {
+    List<String> ids = [userId, otherUserId];
+    ids.sort();
+    String chatRoomId = ids.join('_');
+
+    await _firestore.collection("chat_rooms").doc(chatRoomId).set({
+      'typing_$userId': isTyping,
+      'typingTimestamp_$userId': Timestamp.now(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Stream typing status for other user in a chat
+  Stream<bool> streamTypingStatus(String currentUserId, String otherUserId) {
+    List<String> ids = [currentUserId, otherUserId];
+    ids.sort();
+    String chatRoomId = ids.join('_');
+
+    return _firestore
+        .collection("chat_rooms")
+        .doc(chatRoomId)
+        .snapshots()
+        .map((doc) {
+      if (!doc.exists) return false;
+
+      final data = doc.data();
+      final isTyping = data?['typing_$otherUserId'] ?? false;
+      final typingTimestamp = data?['typingTimestamp_$otherUserId'] as Timestamp?;
+
+      // Only show typing if timestamp is within last 5 seconds
+      if (isTyping && typingTimestamp != null) {
+        final now = DateTime.now();
+        final typingTime = typingTimestamp.toDate();
+        final difference = now.difference(typingTime);
+        return difference.inSeconds < 5;
+      }
+
+      return false;
+    });
+  }
+
   // Get messages
   Stream<QuerySnapshot> getMessages(String userId, String otherUserId) {
     // Construct chat room ID
