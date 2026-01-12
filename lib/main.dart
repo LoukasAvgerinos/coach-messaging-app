@@ -3,10 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
-import 'themes/theme_provider.dart';
-import 'services/auth/auth_gate.dart';
-import 'services/notification_service.dart';
-import 'services/message_listener_service.dart';
+import 'core/theme/theme_provider.dart';
+import 'features/auth/services/auth_gate.dart';
+import 'features/notifications/services/notification_service.dart';
+import 'features/chat/services/message_listener_service.dart';
 
 // Global navigator key - allows navigation from anywhere in the app
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();

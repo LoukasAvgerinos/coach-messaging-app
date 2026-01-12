@@ -1,0 +1,163 @@
+ANDREOPOULOS MESSAGING - PROJECT STRUCTURE
+==========================================
+
+lib/
+│
+├── 📄 main.dart                                    # App entry point
+├── 📄 firebase_options.dart                        # Firebase config
+│
+├── 🎯 core/                                        # Core App Functionality
+│   ├── constants/
+│   │   ├── 📄 firestore_constants.dart            # DB collection & field names
+│   │   └── 📄 asset_constants.dart                # Asset paths
+│   ├── theme/
+│   │   ├── 📄 app_theme.dart                      # Light & dark themes
+│   │   └── 📄 theme_provider.dart                 # Theme state management
+│   ├── utils/
+│   │   ├── 📄 validators.dart                     # Input validation
+│   │   └── 📄 formatters.dart                     # Date/text formatting
+│   ├── routes/                                     # (Future) App routing
+│   └── errors/                                     # (Future) Custom exceptions
+│
+├── 🔧 shared/                                      # Shared Components
+│   ├── widgets/
+│   │   ├── buttons/
+│   │   │   └── 📄 primary_button.dart             # Reusable button
+│   │   ├── inputs/
+│   │   │   └── 📄 app_text_field.dart             # Reusable text field
+│   │   ├── navigation/
+│   │   │   └── 📄 app_drawer.dart                 # App drawer menu
+│   │   ├── theme/
+│   │   │   └── 📄 theme_toggle_button.dart        # Theme switch
+│   │   └── loading/                                # (Future) Loading widgets
+│   └── models/                                     # (Future) Shared models
+│
+└── 🎨 features/                                    # Feature Modules
+    │
+    ├── 🔐 auth/                                    # Authentication
+    │   ├── data/
+    │   │   ├── models/
+    │   │   └── repositories/
+    │   ├── domain/
+    │   │   ├── entities/
+    │   │   └── usecases/
+    │   ├── presentation/
+    │   │   ├── pages/
+    │   │   │   ├── 📄 login_page.dart             # Login screen
+    │   │   │   ├── 📄 register_page.dart          # Registration screen
+    │   │   │   └── 📄 password_guidelines_page.dart # Password help
+    │   │   ├── widgets/
+    │   │   └── providers/
+    │   └── services/
+    │       ├── 📄 auth_service.dart               # Firebase auth
+    │       ├── 📄 auth_gate.dart                  # Auth state handler
+    │       └── 📄 login_or_register.dart          # Login/Register router
+    │
+    ├── 💬 chat/                                    # Messaging
+    │   ├── data/
+    │   │   ├── models/
+    │   │   │   └── 📄 message_model.dart          # Message data model
+    │   │   └── repositories/
+    │   ├── domain/
+    │   │   ├── entities/
+    │   │   └── usecases/
+    │   ├── presentation/
+    │   │   ├── pages/
+    │   │   │   ├── 📄 chat_page.dart              # 1-on-1 chat
+    │   │   │   ├── 📄 athlete_messages_page.dart  # Athlete message list
+    │   │   │   ├── 📄 coach_messages_page.dart    # Coach message list
+    │   │   │   └── 📄 old_chat_page.dart          # Legacy (to be removed)
+    │   │   ├── widgets/
+    │   │   │   └── 📄 user_tile.dart              # User list item
+    │   │   └── providers/
+    │   └── services/
+    │       ├── 📄 chat_service.dart               # Firestore chat ops
+    │       └── 📄 message_listener_service.dart   # Real-time messages
+    │
+    ├── 👤 profile/                                 # Profile Management
+    │   ├── data/
+    │   │   ├── models/
+    │   │   │   └── 📄 athlete_profile_model.dart  # Athlete profile data
+    │   │   └── repositories/
+    │   ├── domain/
+    │   │   ├── entities/
+    │   │   └── usecases/
+    │   ├── presentation/
+    │   │   ├── pages/
+    │   │   │   ├── 📄 profile_page.dart           # View profile
+    │   │   │   ├── 📄 profile_edit_page.dart      # Edit profile
+    │   │   │   └── 📄 profile_check_page.dart     # Profile verification
+    │   │   ├── widgets/
+    │   │   └── providers/
+    │   └── services/
+    │       └── 📄 profile_service.dart            # Firestore profile ops
+    │
+    ├── 🏃 race/                                    # Race Tracking
+    │   ├── data/
+    │   │   ├── models/
+    │   │   │   └── 📄 race_model.dart             # Race data model
+    │   │   └── repositories/
+    │   ├── domain/
+    │   │   ├── entities/
+    │   │   └── usecases/
+    │   ├── presentation/
+    │   │   ├── pages/
+    │   │   │   ├── 📄 races_page.dart             # All races
+    │   │   │   ├── 📄 athlete_races_page.dart     # Athlete's races
+    │   │   │   ├── 📄 coach_races_page.dart       # Coach's view
+    │   │   │   └── 📄 race_edit_page.dart         # Add/Edit race
+    │   │   ├── widgets/
+    │   │   └── providers/
+    │   └── services/
+    │       └── 📄 race_service.dart               # Firestore race ops
+    │
+    ├── 👨‍🏫 coach/                                   # Coach Features
+    │   ├── data/
+    │   │   ├── models/
+    │   │   └── repositories/
+    │   ├── presentation/
+    │   │   ├── pages/
+    │   │   │   ├── 📄 coach_dashboard_page.dart   # Coach dashboard
+    │   │   │   ├── 📄 coach_athlete_list_page.dart # Athlete list
+    │   │   │   └── 📄 coach_athlete_detail_page.dart # Athlete details
+    │   │   └── widgets/
+    │   └── services/
+    │
+    ├── 🏠 home/                                    # Home & Settings
+    │   └── presentation/
+    │       ├── pages/
+    │       │   ├── 📄 home_page.dart              # Main home screen
+    │       │   └── 📄 settings_page.dart          # App settings
+    │       └── widgets/
+    │
+    └── 🔔 notifications/                           # Push Notifications
+        ├── data/
+        │   └── repositories/
+        ├── presentation/
+        │   └── widgets/
+        └── services/
+            └── 📄 notification_service.dart       # FCM notifications
+
+
+LEGEND:
+=======
+📄 = Dart file
+🎯 = Core functionality
+🔧 = Shared/reusable
+🎨 = Feature module
+🔐 = Authentication
+💬 = Chat/Messaging
+👤 = User Profile
+🏃 = Race tracking
+👨‍🏫 = Coach features
+🏠 = Home
+🔔 = Notifications
+
+QUICK STATS:
+============
+Total Features: 7 (auth, chat, profile, race, coach, home, notifications)
+Total Pages: 20+
+Total Services: 7
+Total Models: 3
+Shared Widgets: 4
+Core Utilities: 4
