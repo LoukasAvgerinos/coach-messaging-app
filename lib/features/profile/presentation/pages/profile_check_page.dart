@@ -102,9 +102,7 @@ class _ProfileCheckPageState extends State<ProfileCheckPage> {
     if (_isChecking) {
       return Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -168,7 +166,9 @@ class _ProfileCheckPageState extends State<ProfileCheckPage> {
                     // After creating profile, go to home page
                     if (mounted) {
                       Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (context) => const HomePage()),
+                        MaterialPageRoute(
+                          builder: (context) => const HomePage(),
+                        ),
                       );
                     }
                   },

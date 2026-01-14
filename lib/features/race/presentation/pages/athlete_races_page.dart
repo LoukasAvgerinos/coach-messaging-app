@@ -9,10 +9,7 @@ import 'race_edit_page.dart';
 class AthleteRacesPage extends StatefulWidget {
   final String athleteId;
 
-  const AthleteRacesPage({
-    super.key,
-    required this.athleteId,
-  });
+  const AthleteRacesPage({super.key, required this.athleteId});
 
   @override
   State<AthleteRacesPage> createState() => _AthleteRacesPageState();
@@ -35,9 +32,7 @@ class _AthleteRacesPageState extends State<AthleteRacesPage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => RaceEditPage(
-                athleteId: widget.athleteId,
-              ),
+              builder: (context) => RaceEditPage(athleteId: widget.athleteId),
             ),
           );
         },
@@ -56,9 +51,7 @@ class _AthleteRacesPageState extends State<AthleteRacesPage> {
 
           // Error
           if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
+            return Center(child: Text('Error: ${snapshot.error}'));
           }
 
           // No races
@@ -70,8 +63,9 @@ class _AthleteRacesPageState extends State<AthleteRacesPage> {
                   Icon(
                     Icons.event_busy,
                     size: 100,
-                    color:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.3),
                   ),
                   const SizedBox(height: 24),
                   Text(
@@ -102,8 +96,7 @@ class _AthleteRacesPageState extends State<AthleteRacesPage> {
 
           // Display races
           final races = snapshot.data!;
-          final upcomingRaces =
-              races.where((race) => race.isUpcoming).toList();
+          final upcomingRaces = races.where((race) => race.isUpcoming).toList();
           final pastRaces = races.where((race) => race.isPast).toList();
 
           return ListView(
@@ -120,8 +113,7 @@ class _AthleteRacesPageState extends State<AthleteRacesPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                ...upcomingRaces
-                    .map((race) => _buildRaceCard(context, race)),
+                ...upcomingRaces.map((race) => _buildRaceCard(context, race)),
                 const SizedBox(height: 24),
               ],
 
@@ -168,10 +160,7 @@ class _AthleteRacesPageState extends State<AthleteRacesPage> {
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: priorityColor,
-          width: 3,
-        ),
+        side: BorderSide(color: priorityColor, width: 3),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -197,8 +186,10 @@ class _AthleteRacesPageState extends State<AthleteRacesPage> {
                     ),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: priorityColor,
                       borderRadius: BorderRadius.circular(20),
@@ -237,7 +228,9 @@ class _AthleteRacesPageState extends State<AthleteRacesPage> {
                     const SizedBox(width: 16),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.secondary,
                         borderRadius: BorderRadius.circular(8),
@@ -341,10 +334,8 @@ class _AthleteRacesPageState extends State<AthleteRacesPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => RaceEditPage(
-                        athleteId: widget.athleteId,
-                        race: race,
-                      ),
+                      builder: (context) =>
+                          RaceEditPage(athleteId: widget.athleteId, race: race),
                     ),
                   );
                 },
@@ -410,10 +401,7 @@ class _AthleteRacesPageState extends State<AthleteRacesPage> {
                   }
                 }
               },
-              child: const Text(
-                'Delete',
-                style: TextStyle(color: Colors.red),
-              ),
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
             ),
           ],
         );
