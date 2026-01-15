@@ -270,6 +270,61 @@ class ProfileService {
   }
 
   // ==========================================
+  // PAYMENT STATUS OPERATIONS (Coach only)
+  // ==========================================
+
+  /// Update athlete payment status
+  Future<void> updatePaymentStatus({
+    required String athleteId,
+    required bool financiallyAware,
+    double? amountOwed,
+  }) async {
+    try {
+      Map<String, dynamic> updateData = {
+        'financiallyAware': financiallyAware,
+        'amountOwed': amountOwed,
+        'lastPaymentUpdate': Timestamp.fromDate(DateTime.now()),
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      };
+
+      await _firestore
+          .collection(_athletesCollection)
+          .doc(athleteId)
+          .update(updateData);
+
+      print('✅ Payment status updated for athlete: $athleteId');
+    } catch (e) {
+      print('❌ Error updating payment status: $e');
+      throw Exception('Failed to update payment status: $e');
+    }
+  }
+
+  /// Get athlete payment status
+  Future<Map<String, dynamic>?> getPaymentStatus(String athleteId) async {
+    try {
+      DocumentSnapshot doc = await _firestore
+          .collection(_athletesCollection)
+          .doc(athleteId)
+          .get();
+
+      if (doc.exists) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        return {
+          'financiallyAware': data['financiallyAware'] ?? true,
+          'amountOwed': data['amountOwed']?.toDouble() ?? 0.0,
+          'lastPaymentUpdate': data['lastPaymentUpdate'] != null
+              ? (data['lastPaymentUpdate'] as Timestamp).toDate()
+              : null,
+        };
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error getting payment status: $e');
+      return null;
+    }
+  }
+
+  // ==========================================
   // RACE OPERATIONS
   // ==========================================
 

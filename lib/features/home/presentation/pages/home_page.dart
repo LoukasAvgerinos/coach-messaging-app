@@ -1,93 +1,23 @@
-/*
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:andreopoulos_messasing/features/chat/presentation/pages/chat_page.dart';
 import 'package:andreopoulos_messasing/shared/widgets/navigation/app_drawer.dart';
 import 'package:andreopoulos_messasing/features/chat/presentation/widgets/user_tile.dart';
 import 'package:andreopoulos_messasing/features/chat/services/chat_service.dart';
 import 'package:andreopoulos_messasing/features/auth/services/auth_service.dart';
+import 'package:andreopoulos_messasing/features/profile/services/profile_service.dart';
+import 'package:andreopoulos_messasing/features/profile/data/models/athlete_profile_model.dart';
+import 'package:audioplayers/audioplayers.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Coaching Chat'), centerTitle: true),
-      drawer: const CustomDrawer(),
-      body: _buildUserList(),
-    );
-  }
-
-  // Build user list except current user
-  Widget _buildUserList() {
-    final chatService = ChatService(); // ← FIX 1: Remove the 's'
-    final authService = AuthService();
-
-    return StreamBuilder(
-      stream: chatService.getUsersStream(),
-      builder: (context, snapshot) {
-        // Error handling
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-
-        // Loading state
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        // Return list view
-        return ListView(
-          children: snapshot.data!
-              .map<Widget>(
-                (userData) =>
-                    _buildUserListItem(userData, context, authService),
-              )
-              .toList(),
-        );
-      },
-    );
-  }
-
-  // Build individual user tile
-  Widget _buildUserListItem(
-    Map<String, dynamic> userData,
-    BuildContext context,
-    AuthService authService,
-  ) {
-    // Display user except current user
-    if (userData["email"] != authService.currentUser?.email) {
-      return UserTile(
-        text: userData["email"],
-        onTap: () {
-          // Navigate to chat page with selected user
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChatPage(
-                receiverEmail: userData["email"],
-                receiverId: userData["uid"], // ← FIX 2: Add receiverId
-              ),
-            ),
-          );
-        },
-      );
-    } else {
-      return Container(); // Return empty widget for current user
-    }
-  }
+  State<HomePage> createState() => _HomePageState();
 }
-*/
-import 'package:flutter/material.dart';
-import 'package:andreopoulos_messasing/features/chat/presentation/pages/chat_page.dart';
-import 'package:andreopoulos_messasing/shared/widgets/navigation/app_drawer.dart';
-import 'package:andreopoulos_messasing/features/chat/presentation/widgets/user_tile.dart';
-import 'package:andreopoulos_messasing/features/chat/services/chat_service.dart';
-import 'package:andreopoulos_messasing/features/auth/services/auth_service.dart';
-import 'package:audioplayers/audioplayers.dart';
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+class _HomePageState extends State<HomePage> {
+  final ProfileService _profileService = ProfileService();
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +62,14 @@ class HomePage extends StatelessWidget {
         ],
       ),
       drawer: const CustomDrawer(),
-      body: _buildUserList(),
+      body: Column(
+        children: [
+          // Payment banner (if athlete has unpaid amount)
+          _buildPaymentBanner(),
+          // User list
+          Expanded(child: _buildUserList()),
+        ],
+      ),
 
       // ⭐ ADD FLOATING BUTTON (OPTIONAL - remove if you prefer only app bar button)
       floatingActionButton: FloatingActionButton(
@@ -209,5 +146,93 @@ class HomePage extends StatelessWidget {
     } else {
       return Container(); // Return empty widget for current user
     }
+  }
+
+  /// Build payment banner for athletes with outstanding balance
+  Widget _buildPaymentBanner() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+
+    if (userId == null) {
+      return const SizedBox.shrink();
+    }
+
+    return StreamBuilder<AthleteProfile?>(
+      stream: _profileService.streamAthleteProfile(userId).asyncMap((profile) async {
+        // If no profile found by athleteId, try by userId
+        if (profile == null) {
+          return await _profileService.getAthleteProfileByUserId(userId);
+        }
+        return profile;
+      }),
+      builder: (context, snapshot) {
+        // Don't show anything while loading or if there's no data
+        if (!snapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+
+        final athlete = snapshot.data!;
+        bool isUnpaid = athlete.financiallyAware == false;
+        double amountOwed = athlete.amountOwed ?? 0.0;
+
+        // Only show banner if athlete has outstanding payment
+        if (!isUnpaid || amountOwed <= 0) {
+          return const SizedBox.shrink();
+        }
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.red.shade700,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Payment Due',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Outstanding balance: €${amountOwed.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.white,
+                size: 18,
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

@@ -54,6 +54,11 @@ class _CoachAthleteDetailPageState extends State<CoachAthleteDetailPage> {
 
             const SizedBox(height: 16),
 
+            // Payment Status Card (Coach only)
+            _buildPaymentStatusCard(context),
+
+            const SizedBox(height: 16),
+
             // Basic Info Card
             _buildBasicInfoCard(context),
 
@@ -558,5 +563,316 @@ class _CoachAthleteDetailPageState extends State<CoachAthleteDetailPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildPaymentStatusCard(BuildContext context) {
+    return StreamBuilder<AthleteProfile?>(
+      stream: _profileService.streamAthleteProfile(widget.athlete.athleteId),
+      initialData: widget.athlete,
+      builder: (context, snapshot) {
+        // Get payment status from athlete profile
+        AthleteProfile? athlete = snapshot.data;
+        bool isFinanciallyAware = athlete?.financiallyAware ?? true;
+        double amountOwed = athlete?.amountOwed ?? 0.0;
+        DateTime? lastUpdate = athlete?.lastPaymentUpdate;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.payment,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Payment Status',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    color: Theme.of(context).colorScheme.primary,
+                    onPressed: () => _showPaymentStatusDialog(context),
+                  ),
+                ],
+              ),
+              const Divider(),
+              const SizedBox(height: 8),
+
+              // Status display
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Status',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Theme.of(context).colorScheme.inversePrimary,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isFinanciallyAware
+                          ? Colors.green.withOpacity(0.2)
+                          : Colors.red.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      isFinanciallyAware ? 'Paid' : 'Unpaid',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isFinanciallyAware ? Colors.green : Colors.red,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              if (!isFinanciallyAware && amountOwed > 0) ...[
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Amount Owed',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Theme.of(context).colorScheme.inversePrimary,
+                      ),
+                    ),
+                    Text(
+                      '€${amountOwed.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
+              if (lastUpdate != null) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Last updated: ${DateFormat('MMM dd, yyyy - HH:mm').format(lastUpdate)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.inversePrimary,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+        );
+      },
+    );
+  }
+
+  /// Show payment status update dialog
+  Future<void> _showPaymentStatusDialog(BuildContext context) async {
+    bool isFinanciallyAware = widget.athlete.financiallyAware ?? true;
+    double currentAmount = widget.athlete.amountOwed ?? 0.0;
+
+    final TextEditingController amountController = TextEditingController(
+      text: currentAmount > 0 ? currentAmount.toStringAsFixed(2) : '',
+    );
+
+    return showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Update Payment Status'),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Athlete: ${widget.athlete.fullName}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Toggle switch
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Financially Up-to-Date',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        Switch(
+                          value: isFinanciallyAware,
+                          activeColor: Colors.green,
+                          onChanged: (value) {
+                            setDialogState(() {
+                              isFinanciallyAware = value;
+                              if (value) {
+                                // If marking as paid, clear the amount
+                                amountController.clear();
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Amount field (only shown when unpaid)
+                    if (!isFinanciallyAware) ...[
+                      Text(
+                        'Amount Owed',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).colorScheme.inversePrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: amountController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Enter amount (e.g., 70.00)',
+                          prefixText: '€ ',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          prefixIcon: Icon(
+                            Icons.euro,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    amountController.dispose();
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    double? amount;
+                    if (!isFinanciallyAware) {
+                      amount = double.tryParse(amountController.text);
+                      if (amount == null || amount <= 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enter a valid amount'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+                    }
+
+                    amountController.dispose();
+                    Navigator.of(dialogContext).pop();
+                    await _updatePaymentStatus(isFinanciallyAware, amount);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF010F31),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Update payment status in Firestore
+  Future<void> _updatePaymentStatus(bool isFinanciallyAware, double? amount) async {
+    try {
+      await _profileService.updatePaymentStatus(
+        athleteId: widget.athlete.athleteId,
+        financiallyAware: isFinanciallyAware,
+        amountOwed: amount,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isFinanciallyAware
+                  ? 'Payment status updated: Athlete is financially up-to-date'
+                  : 'Payment status updated: €${amount?.toStringAsFixed(2)} owed',
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+
+        // Refresh the page to show updated status
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update payment status: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 }

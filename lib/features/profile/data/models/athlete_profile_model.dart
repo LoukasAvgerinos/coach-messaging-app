@@ -31,6 +31,11 @@ class AthleteProfile {
   final String? medicalConditions; // Ιατρικά προβλήματα
   final String? supplements; // Συμπληρώματα διατροφής
 
+  // SECTION 6: Payment Status (Managed by Coach only)
+  final bool? financiallyAware; // Is athlete financially up-to-date?
+  final double? amountOwed; // Amount owed to coach (if not financially aware)
+  final DateTime? lastPaymentUpdate; // Last time payment status was updated
+
   // Metadata
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -53,6 +58,9 @@ class AthleteProfile {
     required this.hasGymAccess,
     this.medicalConditions,
     this.supplements,
+    this.financiallyAware,
+    this.amountOwed,
+    this.lastPaymentUpdate,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -90,6 +98,11 @@ class AthleteProfile {
       'hasGymAccess': hasGymAccess,
       'medicalConditions': medicalConditions,
       'supplements': supplements,
+      'financiallyAware': financiallyAware,
+      'amountOwed': amountOwed,
+      'lastPaymentUpdate': lastPaymentUpdate != null
+          ? Timestamp.fromDate(lastPaymentUpdate!)
+          : null,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -116,6 +129,11 @@ class AthleteProfile {
       hasGymAccess: data['hasGymAccess'] ?? false,
       medicalConditions: data['medicalConditions'],
       supplements: data['supplements'],
+      financiallyAware: data['financiallyAware'],
+      amountOwed: data['amountOwed']?.toDouble(),
+      lastPaymentUpdate: data['lastPaymentUpdate'] != null
+          ? (data['lastPaymentUpdate'] as Timestamp).toDate()
+          : null,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
     );
@@ -137,6 +155,9 @@ class AthleteProfile {
     bool? hasGymAccess,
     String? medicalConditions,
     String? supplements,
+    bool? financiallyAware,
+    double? amountOwed,
+    DateTime? lastPaymentUpdate,
     DateTime? updatedAt,
   }) {
     return AthleteProfile(
@@ -158,6 +179,9 @@ class AthleteProfile {
       hasGymAccess: hasGymAccess ?? this.hasGymAccess,
       medicalConditions: medicalConditions ?? this.medicalConditions,
       supplements: supplements ?? this.supplements,
+      financiallyAware: financiallyAware ?? this.financiallyAware,
+      amountOwed: amountOwed ?? this.amountOwed,
+      lastPaymentUpdate: lastPaymentUpdate ?? this.lastPaymentUpdate,
       createdAt: this.createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
     );
